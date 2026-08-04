@@ -1,0 +1,36 @@
+{% extends 'books/base.html' %}
+{% block content %}
+
+<a href="{% url 'my_library' %}" style="color: #0066cc; text-decoration: none;">← Back to My Library</a>
+
+<h1>{{ book_list.name }}</h1>
+<p style="color: #666;">{{ book_list.books.count }} book{{ book_list.books.count|pluralize }}</p>
+
+{% if books %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+        {% for book in books %}
+            <div class="card" style="display: flex; flex-direction: column;">
+                <a href="{% url 'book_detail' book.pk %}">
+                    {% if book.cover_image %}
+                        <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" style="width: 100%; height: 250px; object-fit: cover; border-radius: 4px; margin-bottom: 1rem;">
+                    {% else %}
+                        <div style="width: 100%; height: 250px; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 4px; margin-bottom: 1rem;">📖</div>
+                    {% endif %}
+                </a>
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">
+                    <a href="{% url 'book_detail' book.pk %}" style="color: #333; text-decoration: none;">{{ book.title }}</a>
+                </h3>
+                <p style="color: #666; margin: 0; font-size: 0.9rem;">{{ book.author }}</p>
+                <p style="color: #999; margin: 0.5rem 0 0 0; font-size: 0.85rem;">By {{ book.owner.username }}</p>
+                <form method="post" action="{% url 'remove_book_from_list' book.pk book_list.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary right">🗑</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p style="color: #999; margin-top: 2rem;">No books in this list yet.</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'books/base.html' %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>{{ profile_user.username }}'s Library</h1>
+            {% if profile_user.first_name or profile_user.last_name %}
+                <p>{{ profile_user.first_name }} {{ profile_user.last_name }}</p>
+            {% endif %}
+            {% if profile_user.email and user.is_authenticated %}
+                <p style="color: #666;">{{ profile_user.email }}</p>
+            {% endif %}
+            <p>Member since {{ profile_user.date_joined|date:"M Y" }}</p>        
+            </div>
+        {% if user == profile_user %}
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- <a href="{% url 'edit_profile' %}" class="btn btn-tertiary">Achievements</a> -->
+                <a href="{% url 'edit_profile' %}" class="btn">Edit Profile</a>
+                <a href="{% url 'change_password' %}" class="btn btn-secondary">Change Password</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>Statistics</h2>
+            <p>{% if profile_user == user %}You have{% else %}{{ profile_user.username }} has{%endif%} added {{ profile_user.owned_books.all|length }} {% if profile_user.owned_books.all|length == 1%}book{%else%}books{%endif%}.</p>
+            <p>{% if profile_user == user %}You have{% else %}{{ profile_user.username }} has{%endif%} borrowed {{ profile_user.borrowed_books.all|length }} {% if profile_user.owned_books.all|length == 1%}book{%else%}books{%endif%}.</p>
+            <p>{% if profile_user == user %}You have{% else %}{{ profile_user.username }} has{%endif%} reviewed {{ profile_user.reviews.all|length }} {% if profile_user.reviews.all|length == 1%}book{%else%}books{%endif%}.</p>
+        </div>
+    </div>
+</div>
+
+<h2>Books Available to Borrow</h2>
+{% if books %}
+    <div class="book-grid">
+        {% for book in books %}
+            <div class="book-item">
+                <a href="{% url 'book_detail' book.pk %}">
+                    <div class="book-cover">
+                        {% if book.cover_image %}
+                            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}">
+                        {% else %}
+                            📖
+                        {% endif %}
+                    </div>
+                </a>
+                <div class="book-info">
+                    <div class="book-title"><a href="{% url 'book_detail' book.pk %}" style="color: #333; text-decoration: none;">{{ book.title }}</a></div>
+                    <div class="book-author">by {{ book.author }}</div>
+                    <div style="margin-top: 0.5rem;">
+                        {% if book.is_available %}
+                            <span class="available">Available</span>
+                        {% else %}
+                            <span class="unavailable">Borrowed</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>This user hasn't added any books yet.</p>
+{% endif %}
+{% endblock %}

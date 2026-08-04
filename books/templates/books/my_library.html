@@ -1,0 +1,196 @@
+{% extends 'books/base.html' %}
+{% block content %}
+<h1>My Library</h1>
+
+            <a class="right btn" href="{% url 'add_book' %}">Add Book</a>
+
+
+<!-- My Lists Section -->
+<script>
+    console.log("{{ user_lists }}")
+</script>
+{% if user_lists %}
+    <div style="margin-top: 2rem;">
+        <h2>My Lists</h2>        
+        <div id="listsContainer" style="display: flex; gap: 1rem; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 0.5rem; -webkit-overflow-scrolling: touch;">
+            {% for list in user_lists %}
+                <div class="list-card" style="flex: 0 0 280px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0;">{{ list.name }}</h3>
+                    <p style="color: #666; font-size: 0.9rem;">{{ list.books.count }} book{{ list.books.count|pluralize }}</p>
+                    
+                    {% if list.books.all %}
+                        <div style="margin: 1rem 0; max-height: 200px; overflow-y: auto;">
+                            <ul style="list-style: none; padding: 0; margin: 0;">
+                                {% for book in list.books.all|slice:":3" %}
+                                    <li style="padding: 0.5rem 0; border-bottom: 1px solid #eee; font-size: 0.9rem;">
+                                        <a href="{% url 'book_detail' book.pk %}" style="color: #0066cc; text-decoration: none;">{{ book.title }}</a>
+                                    </li>
+                                {% endfor %}
+                                {% if list.books.count > 5 %}
+                                    <li style="padding: 0.5rem 0; color: #999; font-size: 0.9rem;">+{{ list.books.count|add:"-3" }} more</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <p style="color: #999; font-size: 0.9rem;">No books in this list yet</p>
+                    {% endif %}
+                    
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                        <a href="{% url 'view_list' list.pk %}" class="btn">View</a>
+                        <button type="button" class="btn btn-secondary delete-list-btn" data-list-id="{{ list.pk }}">Delete</button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<h2 style="margin-top: 2rem;">Books I Own</h2>
+{% if owned_books %}
+    <div style="margin-bottom: 2rem;">
+        {% for book in owned_books %}
+            <div class="card">
+                <div style="display: grid; grid-template-columns: 150px 1fr auto; gap: 1.5rem; align-items: start;">
+                    <div>
+                        {% if book.cover_image %}
+                            <a href="{% url 'book_detail' book.pk %}"><img src="{{ book.cover_image.url }}" alt="{{ book.title }}" style="width: 75%; border-radius: 4px;"></a>
+                        {% else %}
+                            <div style="width: 100%; height: 200px; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 4px;">📖</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3><a href="{% url 'book_detail' book.pk %}" style="color: #333; text-decoration: none;">{{ book.title }}</a></h3>
+                        <p style="color: #666;">by {{ book.author }}</p>
+                        <div style="margin: 1rem 0;">
+                            {% if book.is_available %}
+                                <span class="available">✓ Available</span>
+                            {% else %}
+                                <span class="unavailable">✗ Currently Borrowed</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; bottom:0;">
+                        <a href="{% url 'edit_book' book.pk %}" class="btn" style="font-size: 0.9rem; text-align: center;">Edit</a>
+                        <a href="{% url 'delete_book' book.pk %}" class=".delete-list-btn btn btn-secondary" style="font-size: 0.9rem; text-align: center;">Delete</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>You haven't added any books yet. <a href="{% url 'add_book' %}">Add one now!</a></p>
+{% endif %}
+
+<h2 style="margin-top: 2rem;">Books Borrowed From Me</h2>
+{% if active_loans %}
+    <div style="margin-bottom: 2rem;">
+        {% for loan in active_loans %}
+            <div class="card">
+                <div style="display: grid; grid-template-columns: 150px 1fr auto; gap: 1.5rem; align-items: start;">
+                    <div>
+                        {% if loan.book.cover_image %}
+                            <a href="{% url 'book_detail' loan.book.pk %}"><img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" style="width: 75%; border-radius: 4px;"></a>
+                        {% else %}
+                            <div style="width: 100%; height: 200px; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 4px;">📖</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3><a href="{% url 'book_detail' loan.book.pk %}" style="color: #333; text-decoration: none;">{{ loan.book.title }}</a></h3>
+                        <p style="color: #666;">by {{ loan.book.author }}</p>
+                        <p><strong>Borrowed by:</strong> {{ loan.borrower.username }}</p>
+                        <p><strong>Borrowed on:</strong> {{ loan.borrowed_at|date:"M d, Y" }}</p>
+                    </div>
+                    <div>
+                        <form method="post" action="{% url 'mark_book_returned' loan.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn">Mark as Returned</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No books are currently borrowed from you.</p>
+{% endif %}
+
+<h2 style="margin-top: 2rem;">Books I'm Borrowing</h2>
+{% if borrowed_books %}
+    <div style="margin-bottom: 2rem;">
+        {% for loan in borrowed_books %}
+            <div class="card">
+                <div style="display: grid; grid-template-columns: 150px 1fr auto; gap: 1.5rem; align-items: start;">
+                    <div>
+                        {% if loan.book.cover_image %}
+                            <a href="{% url 'book_detail' loan.book.pk %}"><img src="{{ loan.book.cover_image.url }}" alt="{{ loan.book.title }}" style="width: 75%; border-radius: 4px;"></a>
+                        {% else %}
+                            <div style="width: 100%; height: 200px; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-radius: 4px;">📖</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3><a href="{% url 'book_detail' loan.book.pk %}" style="color: #333; text-decoration: none;">{{ loan.book.title }}</a></h3>
+                        <p style="color: #666;">by {{ loan.book.author }}</p>
+                        <p><strong>From:</strong> {{ loan.book.owner.username }}</p>
+                        <p><strong>Borrowed on:</strong> {{ loan.borrowed_at|date:"M d, Y" }}</p>
+                    </div>
+                    <div>
+                        <form method="post" action="{% url 'return_book' loan.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn">Return Book</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>You're not borrowing any books right now.</p>
+{% endif %}
+
+
+<script>
+    const container = document.getElementById('listsContainer');
+    const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+    const scrollRightBtn = document.getElementById('scrollRightBtn');
+
+    // Scroll functionality
+    if (scrollLeftBtn && scrollRightBtn && container) {
+        scrollLeftBtn.addEventListener('click', () => {
+            container.scrollBy({ left: -300, behavior: 'smooth' });
+        });
+
+        scrollRightBtn.addEventListener('click', () => {
+            container.scrollBy({ left: 300, behavior: 'smooth' });
+        });
+    }
+
+    // Delete list functionality
+    document.querySelectorAll('.delete-list-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to delete this list?')) return;
+            
+            const listId = btn.dataset.listId;
+            try {
+                const response = await fetch(`/list/${listId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    btn.closest('.list-card').style.opacity = '0.5';
+                    setTimeout(() => location.reload(), 300);
+                } else {
+                    alert('Error deleting list');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    });
+</script>
+
+
+{% endblock %}

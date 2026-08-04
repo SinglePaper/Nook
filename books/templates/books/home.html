@@ -1,0 +1,78 @@
+{% extends 'books/base.html' %}
+{% block content %}
+<h1>Discover Books</h1>
+<form method="get" style="margin: 1rem 0;">
+    <input type="text" name="search" id="search-input" placeholder="Search by title, author or tag" value="{{ request.GET.search }}" list="suggestions" autocomplete="off">
+    <datalist id="suggestions"></datalist>
+    <button type="submit" class="btn">Search</button>
+    {% if books|random %}
+        {% with randombook=books|random %}
+            <a href="{% url 'book_detail' randombook.pk %}"><button type="button" class="btn">Random</button></a> <!--show detail of random book -->
+        {% endwith %}
+    {% endif %}
+</form>
+<div class="book-grid">
+    {% if not books.all %}
+        <p>No results.</p>
+    {% endif %}
+    {% for book in books %}
+        <div class="book-item">
+            <a href="{% url 'book_detail' book.pk %}">
+                <div class="book-cover">
+                    {% if book.cover_image %}
+                        <img src="{{ book.cover_image.url }}" alt="{{ book.title }}">
+                    {% else %}
+                        📖
+                    {% endif %}
+                </div>
+            </a>
+            <div class="book-info">
+                <div class="book-title"><a href="{% url 'book_detail' book.pk %}" style="color: #333; text-decoration: none;">{{ book.title }}</a></div>
+                <div class="book-author">by {{ book.author }}</div>
+                {% if book.reviews.all %}
+                    <div class="rating">★ {{ book.average_rating }} / 5.0 ({{ book.reviews.all|length }} reviews)</div>
+                {% endif %}
+                <div style="margin-top: 0.5rem; display:grid; align-items: end;">
+                    {% if book.is_available %}
+                        <span class="available">Available</span>
+                    {% else %}
+                        <span class="unavailable">Borrowed</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<div>
+    <script>
+        var input = document.querySelector('#search-input');
+        var datalist = document.querySelector('#suggestions');
+
+        input.addEventListener('input', function() {
+            var value = this.value;
+            
+            if (value.length < 1) {
+                datalist.innerHTML = '';
+                return;
+            }
+            
+            fetch('/api/autocomplete/?query=' + encodeURIComponent(value))
+                .then(response => response.json())
+                .then(data => {
+                    // Flatten all results
+                    var suggestions = [
+                        ...data.authors,
+                        ...data.tags,
+                        ...data.books
+                    ];
+                    suggestions = [...new Set(suggestions)]
+                    
+                    datalist.innerHTML = suggestions
+                        .map(suggestion => `<option value="${suggestion}">`)
+                        .join('');
+                });
+        });
+    </script>
+</div>
+
+{% endblock %}

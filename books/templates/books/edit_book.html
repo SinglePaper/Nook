@@ -1,0 +1,83 @@
+{% extends 'books/base.html' %}
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <h1>Edit Book</h1>
+    <form method="post" enctype="multipart/form-data" id="book-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="form-group">
+                {{ field.label_tag }}
+                {% if field.name == 'author' %}
+                    {{ field }}
+                    <datalist id="author-suggestions"></datalist>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+                {% if field.errors %}
+                    <div class="error">
+                        {% for error in field.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn">Save Changes</button>
+            <a href="{% url 'book_detail' book.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+    <footer>
+        <!-- Author autocomplete -->
+        <script>
+            var authorInput = document.querySelector('.author-input');
+            var authorDatalist = document.querySelector('#author-suggestions');
+
+            authorInput.addEventListener('input', function() {
+                var value = this.value;
+                
+                if (value.length < 1) {
+                    authorDatalist.innerHTML = '';
+                    return;
+                }
+                
+                fetch('/api/author-autocomplete/?query=' + encodeURIComponent(value))
+                    .then(response => response.json())
+                    .then(data => {
+
+                        authors = [...new Set(data.authors)]
+                        authorDatalist.innerHTML = authors
+                            .map(author => `<option value="${author}">`)
+                            .join('');
+                    });
+            });
+        </script>
+
+        <!-- Tags Tagify -->
+        <script>
+            const input = document.querySelector('.tagify-input');
+                        
+            const tagify = new Tagify(input, {
+                whitelist: "{{ all_tags }}".split(","),
+                dropdown : {
+                    enabled: 3,            // show suggestion after 1 typed character
+                    fuzzySearch: true,    // match only suggestions that starts with the typed characters
+                    position: 'text',      // position suggestions list next to typed text
+                    caseSensitive: false,   // allow adding duplicate items if their case is different
+                },
+                maxTags: 20
+            });
+                        
+            // Load existing tags
+            tagify.removeAllTags();
+            tagify.addTags("{{ book.tags.all|join:","}}");
+
+            // Convert Tagify output to comma-separated string before submission
+            document.getElementById('book-form').addEventListener('submit', function() {
+                const tags = tagify.value.map(tag => tag.value).join(', ');
+                input.value = tags;
+            });
+        </script>
+    </footer>
+</div>
+{% endblock %}

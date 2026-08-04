@@ -1,0 +1,24 @@
+{% load static %}
+<!doctype html>
+<html>
+  <title>404</title>
+  <style>
+    .vignette {
+      background-color: #00477b;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      box-shadow: 0 0 50rem rgba(0, 0, 0, 0.9) inset;
+    }
+    img {
+        height:90%;
+    }
+  </style>
+  <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+  <body>
+    <div class="vignette"></div>
+    <img src="{% static '404.svg' %}">
+  </body>
+</html>

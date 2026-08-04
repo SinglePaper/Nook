@@ -1,0 +1,269 @@
+{% extends 'books/base.html' %}
+{% block content %}
+
+<div class="card">
+    <div style="display: grid; grid-template-columns: 250px 1fr; gap: 2rem;">
+        <div>
+            {% if book.cover_image %}
+                <img src="{{ book.cover_image.url }}" style="max-width: 100%; border-radius: 8px;">
+            {% else %}
+                <div style="width: 100%; height: 350px; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 4rem; border-radius: 8px;">📖</div>
+            {% endif %}
+        </div>
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <h1>{{ book.title }}</h1>
+                    <p style="color: #666; font-size: 1.1rem;">by {{ book.author }}</p>
+                    {% if avg_rating %}
+                        <p class="rating">★ {{ book.average_rating }} / 5.0 ({{ book.reviews.all|length }} reviews)</p>
+                    {% endif %}
+                </div>
+            </div>
+            <pre style="margin: 1rem 0; white-space: pre-wrap;">{{ book.description }}</pre>
+            {% if book.tags.all %}
+                <p style="margin: 1rem 0;"><strong>Tags:</strong> {{ book.tags.all|join:", " }}</p>
+            {% endif %}
+            <p><strong>Owner:</strong> <a href="{% url 'profile' book.owner.username %}">{{ book.owner.username }}</a></p>
+            {% if book.loans.all %}
+                <p style="margin: 1rem 0;"><i>This book has been loaned out {{ book.loans.all|length }} times!</i></p>
+            {% endif %}
+            {% if user.is_authenticated %}
+                {% if book.is_available %}
+                    <form method="post" action="{% url 'borrow_book' book.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn">Borrow</button>
+                    </form>
+                {% else %}
+                    <p class="unavailable">Currently borrowed</p>
+                {% endif %}
+                <button type="button" class="btn" id="addToListBtn">Add to List</button>
+            {% endif %}
+            {% if user == book.owner or user.is_superuser %}
+                <div style="display: flex; flex-direction: row; gap: 0.5rem; justify-content: center; margin-top:1.5rem">
+                    <a href="{% url 'edit_book' book.pk %}" class="btn" style="font-size: 0.9rem; min-width: 7rem;">Edit</a>
+                    <a href="{% url 'delete_book' book.pk %}" class="btn btn-secondary" style="font-size: 0.9rem; min-width: 7rem;">Delete</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Adding to List -->
+<div id="addToListModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0;">Add to List</h2>
+            <button type="button" id="closeModalBtn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+        </div>
+
+        <!-- Existing Lists -->
+        {% if user_lists %}
+            <div style="margin-bottom: 2rem;">
+                <h3>Your Lists</h3>
+                <div id="listContainer" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    {% for list in user_lists %}
+                        <button type="button" class="add-to-list-btn" data-list-id="{{ list.id }}" style="padding: 0.75rem; text-align: left; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer; transition: all 0.2s;">
+                            {{ list.name }}
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <p style="color: #999; margin-bottom: 2rem;">You don't have any lists yet. Create one below!</p>
+        {% endif %}
+
+        <!-- Create New List -->
+        <div style="border-top: 1px solid #ddd; padding-top: 1.5rem;">
+            <h3>Create New List</h3>
+            <div class="form-group">
+                <input type="text" id="newListName" placeholder="Enter list name..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+            </div>
+            <button type="button" id="createListBtn" class="btn">Create & Add Book</button>
+        </div>
+
+        <div id="statusMessage" style="margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none;"></div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Reviews</h2>
+    {% if user.is_authenticated %}
+        {% if user_review %}
+            <button type="button" class="btn" id="editReviewBtn" style="margin-bottom: 1rem">Edit Review</button>
+        {% endif %}
+        <form method="post" id="reviewForm" style="margin-bottom: 2rem;" {% if user_review %}hidden{% endif %}>
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Your Rating:</label>
+                {{ form.rating }}
+            </div>
+            <div class="form-group">
+                <label>Your Review:</label>
+                {{ form.text }}
+            </div>
+            <button type="submit" class="btn">{% if user_review %}Update{% else %}Add{% endif %} Review</button>
+        </form>
+    {% endif %}
+
+    {% if reviews %}
+        {% for review in reviews %}
+            <div style="border-top: 1px solid #ddd; padding: 1rem 0;">
+                <strong>{{ review.reviewer.username }}</strong> - <span class="rating">★ {{ review.rating }}</span>
+                <p>{{ review.text }}</p>
+                <small style="color: #999;">{{ review.created_at|date:"M d, Y" }}</small>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p style="color: #999;">No reviews yet. Be the first to review!</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div>
+        <h2>Similar Books</h2>
+    
+        <div id="listsContainer" style="display: flex; gap: 1rem; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 0.5rem; -webkit-overflow-scrolling: touch;">
+            {% for similar_book in book.tags.similar_objects %}
+                <div class="list-card" style="flex: 0 0 280px; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <a href="{% url 'book_detail' similar_book.pk %}">
+                        <div class="book-cover">
+                            {% if similar_book.cover_image %}
+                                <img src="{{ similar_book.cover_image.url }}" alt="{{ similar_book.title }}"  style="max-width: 100%; border-radius: 8px;">
+                            {% else %}
+                                📖
+                            {% endif %}
+                        </div>
+                    </a>
+                    <div class="book-info">
+                        <div class="book-title"><a href="{% url 'book_detail' similar_book.pk %}" style="color: #333; text-decoration: none;">{{ similar_book.title }}</a></div>
+                        <div class="book-author">by {{ similar_book.author }}</div>
+                        {% if similar_book.reviews.all %}
+                            <div class="rating">★ {{ similar_book.average_rating }} / 5.0 ({{ similar_book.reviews.all|length }} reviews)</div>
+                        {% endif %}
+                        <div style="margin-top: 0.5rem; display:grid; align-items: end;">
+                            {% if similar_book.is_available %}
+                                <span class="available">Available</span>
+                            {% else %}
+                                <span class="unavailable">Borrowed</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% for similar_book in book.tags.similar_objects %}
+    <script>
+        console.log("{{ similar_book }}")
+    </script>
+{% endfor %}
+
+
+
+<script>
+    const bookPk = {{ book.pk }};
+    const modal = document.getElementById('addToListModal');
+    const addToListBtn = document.getElementById('addToListBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const createListBtn = document.getElementById('createListBtn');
+    const newListInput = document.getElementById('newListName');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // Open modal
+    addToListBtn.addEventListener('click', () => {
+        modal.style.display = 'flex';
+    });
+
+    // Close modal
+    closeModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    function closeModal() {
+        modal.style.display = 'none';
+        statusMessage.style.display = 'none';
+        newListInput.value = '';
+    }
+
+    // Add book to existing list
+    document.querySelectorAll('.add-to-list-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const listId = btn.dataset.listId;
+            await addBookToList(listId, btn.textContent);
+        });
+    });
+
+    // Create new list and add book
+    createListBtn.addEventListener('click', async () => {
+        const listName = newListInput.value.trim();
+        if (!listName) {
+            showStatus('Please enter a list name', 'error');
+            return;
+        }
+        await createAndAddToList(listName);
+    });
+
+    async function addBookToList(listId, listName) {
+        try {
+            const response = await fetch(`/book/${bookPk}/add-to-list/${listId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                showStatus(`✓ Added to "${listName}"`, 'success');
+                setTimeout(closeModal, 1500);
+            } else {
+                showStatus(data.error || 'Error adding book', 'error');
+            }
+        } catch (error) {
+            showStatus('Error: ' + error.message, 'error');
+        }
+    }
+
+    async function createAndAddToList(listName) {
+        try {
+            const response = await fetch(`/book/${bookPk}/create-list/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: new FormData(Object.assign(document.createElement('form'), {
+                    innerHTML: `<input name="list_name" value="${listName}">`,
+                })),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                showStatus(`✓ ${data.message}`, 'success');
+                setTimeout(closeModal, 1500);
+            } else {
+                showStatus(data.error || 'Error creating list', 'error');
+            }
+        } catch (error) {
+            showStatus('Error: ' + error.message, 'error');
+        }
+    }
+
+    function showStatus(message, type) {
+        statusMessage.textContent = message;
+        statusMessage.style.display = 'block';
+        statusMessage.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+        statusMessage.style.color = type === 'success' ? '#155724' : '#721c24';
+        statusMessage.style.border = type === 'success' ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+    }
+
+    // Existing review code
+    document.getElementById("editReviewBtn")?.addEventListener("click", () => {
+        document.getElementById("editReviewBtn").style.display = 'none';
+        document.getElementById("reviewForm").hidden = false;
+    });
+</script>
+{% endblock %}

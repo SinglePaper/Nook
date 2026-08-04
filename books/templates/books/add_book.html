@@ -1,0 +1,73 @@
+{% extends 'books/base.html' %}
+{% block content %}
+<div class="card" style="max-width: 600px;">
+    <h1>Add a Book to Your Library</h1>
+    <form method="post" enctype="multipart/form-data" id="book-form">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="form-group">
+                {{ field.label_tag }}                
+                {% if field.name == 'author' %}
+                    {{ field }}
+                    <datalist id="author-suggestions"></datalist>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+                {% if field.errors %}
+                    <div class="error">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn">Add Book</button>
+        <a href="{% url 'home' %}" class="btn btn-secondary" style="margin-left: 0.5rem;">Cancel</a>
+    </form>
+    <footer>        
+        <!-- Author autocomplete -->
+        <script>
+            var authorInput = document.querySelector('.author-input');
+            var authorDatalist = document.querySelector('#author-suggestions');
+
+            authorInput.addEventListener('input', function() {
+                var value = this.value;
+                
+                if (value.length < 1) {
+                    authorDatalist.innerHTML = '';
+                    return;
+                }
+                
+                fetch('/api/author-autocomplete/?query=' + encodeURIComponent(value))
+                    .then(response => response.json())
+                    .then(data => {
+
+                        authors = [...new Set(data.authors)]
+                        authorDatalist.innerHTML = authors
+                            .map(author => `<option value="${author}">`)
+                            .join('');
+                    });
+            });
+        </script>
+
+        <!-- Tags Tagify -->
+        <script>
+            const input = document.querySelector('.tagify-input');
+
+            const tagify = new Tagify(input, {
+                whitelist: "{{ all_tags }}".split(","),
+                dropdown : {
+                    enabled: 3,            // show suggestion after 1 typed character
+                    fuzzySearch: true,    // match only suggestions that starts with the typed characters
+                    position: 'text',      // position suggestions list next to typed text
+                    caseSensitive: false,   // allow adding duplicate items if their case is different
+                },
+                maxTags: 20
+            });
+
+            // Convert Tagify output to comma-separated string before submission
+            document.getElementById('book-form').addEventListener('submit', function() {
+                const tags = tagify.value.map(tag => tag.value.toLowerCase()).join(', ');
+                input.value = tags;
+            });
+        </script>
+    </footer>
+</div>
+{% endblock %}
