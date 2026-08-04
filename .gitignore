@@ -1,2 +1,8 @@
-media/cover/*
 db.sqlite3
+/media/covers
+/*/__pycache__/*
+/books/__pycache__
+/books/migrations/__pycache__
+/nook_project/__pycache__
+/users/__pycache__
+/users/migrations/__pycache__
