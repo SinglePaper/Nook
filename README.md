@@ -5,7 +5,7 @@ Nook is a self-hosted website where you can share your book collection with frie
 
 To set up your instance of Nook, use Conda or Miniconda and create a Conda environment using:
 ```bash
-conda create --file environment.yml
+conda create --file environment.yaml
 ```
 Then, activate the environment using `conda activate nook`. 
 
