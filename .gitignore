@@ -6,3 +6,6 @@ db.sqlite3
 /nook_project/__pycache__
 /users/__pycache__
 /users/migrations/__pycache__
+
+# For Pycharm users
+.idea/
