@@ -304,7 +304,8 @@ def mark_book_returned(request, loan_pk):
 def profile(request, username):
     user = get_object_or_404(User, username=username)
     books = user.owned_books.all()
-    return render(request, 'books/profile.html', {'profile_user': user, 'books': books})
+    subscriptions = user.subscriptions.all()
+    return render(request, 'books/profile.html', {'profile_user': user, 'books': books, 'subscriptions' : subscriptions})
 
 @login_required
 def edit_profile(request):

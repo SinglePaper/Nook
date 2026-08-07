@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from taggit.managers import TaggableManager
 
+
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.CharField(max_length=200)
@@ -34,6 +35,7 @@ class Book(models.Model):
             return total_rating / reviews.count()
         return 0.0
 
+
 class BookList(models.Model):
     name = models.CharField(max_length=255)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='book_lists')
@@ -43,6 +45,7 @@ class BookList(models.Model):
     
     def __str__(self):
         return self.name
+
 
 class Loan(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name='loans')
@@ -70,3 +73,17 @@ class Review(models.Model):
     
     def __str__(self):
         return f"{self.reviewer.username} - {self.book.title}"
+
+
+class Subscriptions(models.Model):
+    subscriber = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    subscribed = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscribers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('subscribed', 'subscriber')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.subscriber.username} subscribed to {self.subscribed.username}"
+
